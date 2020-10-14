@@ -1,9 +1,16 @@
-const { Movie, validate } = require("../models/movie");
-const { Genre } = require("../models/genre");
+const {
+  Movie,
+  validate
+} = require("../models/movie");
+const {
+  Genre
+} = require("../models/genre");
 const auth = require("../middleware/auth");
 const admin = require("../middleware/admin");
 const validateObjectId = require("../middleware/validateObjectId");
 const moment = require("moment");
+const multer = require('multer');
+const uuidv4 = require("uuid/v4");
 const mongoose = require("mongoose");
 const express = require("express");
 const router = express.Router();
@@ -15,8 +22,37 @@ router.get("/", async (req, res) => {
   res.send(movies);
 });
 
-router.post("/", [auth], async (req, res) => {
-  const { error } = validate(req.body);
+// const storage = multer.diskStorage({
+//   destination: function (req, file, cb) {
+//     cb(null, './uploads/');
+//   },
+
+//   filename: function (req, file, cb) {
+//     const fileName = file.originalname.toLowerCase().split(' ').join('-');
+//     cb(null, uuidv4() + '-' + fileName)
+//   }
+// });
+// const fileFilter = (req, file, cb) => {
+//   if (file.mimetype === "image/jpg" ||
+//     file.mimetype === "image/jpeg" ||
+//     file.mimetype === "image/png") {
+
+//     cb(null, true);
+//   } else {
+//     cb(null, false);
+//     return cb(new Error("Image uploaded is not of type jpg/jpeg or png"));
+//   }
+// }
+
+// const upload = multer({
+//   storage: storage,
+//   fileFilter: fileFilter
+// });
+router.post("/", [auth], /*upload.single('profileImg'),*/ async (req, res) => {
+  const {
+    error
+  } = validate(req.body);
+  //const url = req.protocol + '://' + req.get('host')
   if (error) return res.status(400).send(error.details[0].message);
 
   const genre = await Genre.findById(req.body.genreId);
@@ -28,8 +64,13 @@ router.post("/", [auth], async (req, res) => {
       _id: genre._id,
       name: genre.name
     },
+    starActor: req.body.starActor,
+    producer: req.body.producer,
+    year: req.body.year,
     numberInStock: req.body.numberInStock,
     dailyRentalRate: req.body.dailyRentalRate,
+    description: req.body.description,
+    //profileImg: url + '/uploads/' + req.file.filename,
     publishDate: moment().toJSON()
   });
   await movie.save();
@@ -37,27 +78,33 @@ router.post("/", [auth], async (req, res) => {
   res.send(movie);
 });
 
-router.put("/:id", [auth], async (req, res) => {
-  const { error } = validate(req.body);
+router.put("/:id", [auth], /*upload.single('profileImg'),*/ async (req, res) => {
+  const {
+    error
+  } = validate(req.body);
   if (error) return res.status(400).send(error.details[0].message);
-
+  //const url = req.protocol + '://' + req.get('host')
   const genre = await Genre.findById(req.body.genreId);
   if (!genre) return res.status(400).send("Invalid genre.");
 
   const movie = await Movie.findByIdAndUpdate(
-    req.params.id,
-    {
+    req.params.id, {
       title: req.body.title,
       genre: {
         _id: genre._id,
         name: genre.name
       },
+      starActor: req.body.starActor,
+    producer: req.body.producer,
+    year: req.body.year,
       numberInStock: req.body.numberInStock,
-      dailyRentalRate: req.body.dailyRentalRate
-    },
-    { new: true }
+      dailyRentalRate: req.body.dailyRentalRate,
+      description: req.body.description
+     // profileImg: url + '/uploads/' + req.file.filename
+    }, {
+      new: true
+    }
   );
-
   if (!movie)
     return res.status(404).send("The movie with the given ID was not found.");
 
